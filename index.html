@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Inventori Perpustakaan Desa</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 20px;
+        }
+        .header {
+            background-color: #1e3a8a;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .user-nav {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid-layout { grid-template-columns: 1fr; }
+            .user-nav { position: static; justify-content: center; margin-top: 10px; }
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .auth-container {
+            max-width: 400px;
+            margin: 60px auto;
+        }
+        h2 {
+            font-size: 1.2rem;
+            color: #1e3a8a;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+        input, select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        button {
+            width: 100%;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #1d4ed8; }
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid white;
+            color: white;
+            padding: 6px 12px;
+            width: auto;
+        }
+        .btn-outline:hover { background-color: rgba(255,255,255,0.2); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        th { background-color: #f3f4f6; color: #374151; }
+        .badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .badge-available { background-color: #d1fae5; color: #065f46; }
+        .badge-borrowed { background-color: #fee2e2; color: #991b1b; }
+        .badge-returned { background-color: #e0e7ff; color: #3730a3; }
+        .btn-action { width: auto; padding: 4px 8px; font-size: 0.75rem; margin-right: 4px; }
+        .btn-delete { background-color: #ef4444; }
+        .btn-delete:hover { background-color: #dc2626; }
+        .btn-return { background-color: #10b981; }
+        .btn-return:hover { background-color: #059669; }
+        .auth-toggle {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
+        .auth-toggle a { color: #2563eb; text-decoration: none; font-weight: bold; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- HALAMAN AUTENTIKASI (LOGIN & DAFTAR) -->
+    <div id="authView" class="auth-container">
+        <!-- Form Login -->
+        <div id="loginCard" class="card">
+            <h2>Login Sistem Perpustakaan</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" required placeholder="Masukkan username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Masukkan password">
+                </div>
+                <button type="submit">Masuk</button>
+            </form>
+            <div class="auth-toggle">
+                Belum punya akun? <a href="#" onclick="toggleAuthMode('register')">Daftar Anggota</a>
+            </div>
+            <div style="margin-top: 15px; font-size: 0.75rem; color: #666; text-align: center;">
+                <em>Default Admin: username: <b>admin</b> | password: <b>admin</b></em>
+            </div>
+        </div>
+
+        <!-- Form Registrasi -->
+        <div id="registerCard" class="card hidden">
+            <h2>Daftar Akun Anggota</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="regFullName">Nama Lengkap</label>
+                    <input type="text" id="regFullName" required placeholder="Nama sesuai KTP">
+                </div>
+                <div class="form-group">
+                    <label for="regUsername">Username</label>
+                    <input type="text" id="regUsername" required placeholder="Pilih username">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Password</label>
+                    <input type="password" id="regPassword" required placeholder="Minimal 4 karakter">
+                </div>
+                <button type="submit" style="background-color: #059669;">Daftar Sekarang</button>
+            </form>
+            <div class="auth-toggle">
+                Sudah punya akun? <a href="#" onclick="toggleAuthMode('login')">Login Kembali</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- HALAMAN UTAMA DASHBOARD -->
+    <div id="dashboardView" class="container hidden">
+        <div class="header">
+            <h1>Sistem Inventori Perpustakaan Desa</h1>
+            <p>Pengelolaan Data Buku dan Riwayat Transaksi</p>
+            <div class="user-nav">
+                <span id="userInfo"></span>
+                <button class="btn-outline" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <!-- Kolom Kiri: Form Input (Khusus Admin) -->
+            <div id="adminPanel">
+                <!-- Form Tambah Buku -->
+                <div class="card">
+                    <h2>Tambah Buku Baru</h2>
+                    <form id="bookForm">
+                        <div class="form-group">
+                            <label for="kodeBuku">Kode / ISBN Buku</label>
+                            <input type="text" id="kodeBuku" required placeholder="Contoh: BK-001">
+                        </div>
+                        <div class="form-group">
+                            <label for="judulBuku">Judul Buku</label>
+                            <input type="text" id="judulBuku" required placeholder="Judul lengkap">
+                        </div>
+                        <div class="form-group">
+                            <label for="pengarang">Pengarang</label>
+                            <input type="text" id="pengarang" required placeholder="Nama penulis">
+                        </div>
+                        <div class="form-group">
+                            <label for="kategori">Kategori / Rak</label>
+                            <input type="text" id="kategori" placeholder="Contoh: Pertanian / Rak A1">
+                        </div>
+                        <button type="submit">Simpan Buku</button>
+                    </form>
+                </div>
+
+                <!-- Form Transaksi Pinjam -->
+                <div class="card">
+                    <h2>Peminjaman Buku</h2>
+                    <form id="borrowForm">
+                        <div class="form-group">
+                            <label for="selectBuku">Pilih Buku Tersedia</label>
+                            <select id="selectBuku" required>
+                                <option value="">-- Pilih Buku --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="selectAnggota">Pilih Anggota Peminjam</label>
+                            <select id="selectAnggota" required>
+                                <option value="">-- Pilih Anggota --</option>
+                            </select>
+                        </div>
+                        <button type="submit" style="background-color: #059669;">Catat Peminjaman</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Kolom Kanan: Tabel Data -->
+            <div id="mainContent" style="grid-column: span 1;">
+                <!-- Tabel Inventori Buku -->
+                <div class="card">
+                    <h2>Katalog Buku</h2>
+                    <div style="margin-bottom: 15px;">
+                        <input type="text" id="searchInput" placeholder="Cari berdasarkan judul atau pengarang..." onkeyup="filterBooks()">
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Kode</th>
+                                    <th>Judul</th>
+                                    <th>Pengarang</th>
+                                    <th>Kategori</th>
+                                    <th>Status</th>
+                                    <th class="admin-col">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabel Peminjaman Aktif (Khusus Admin) -->
+                <div class="card admin-only">
+                    <h2>Peminjaman Aktif (Belum Kembali)</h2>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Judul Buku</th>
+                                    <th>Peminjam</th>
+                                    <th>Tanggal Pinjam</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="borrowTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabel Riwayat Seluruh Transaksi -->
+                <div class="card">
+                    <h2>Riwayat Transaksi Peminjaman</h2>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Judul Buku</th>
+                                    <th>Peminjam</th>
+                                    <th>Tgl Pinjam</th>
+                                    <th>Tgl Kembali</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store Data pada LocalStorage
+        let users = JSON.parse(localStorage.getItem('lib_users')) || [
+            { id: '1', username: 'admin', password: 'admin', fullName: 'Petugas Admin', role: 'admin' }
+        ];
+        let books = JSON.parse(localStorage.getItem('lib_books')) || [];
+        let transactions = JSON.parse(localStorage.getItem('lib_transactions')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('lib_current_user')) || null;
+
+        // Inisialisasi Aplikasi
+        function initApp() {
+            if (currentUser) {
+                document.getElementById('authView').classList.add('hidden');
+                document.getElementById('dashboardView').classList.remove('hidden');
+                document.getElementById('userInfo').innerText = `${currentUser.fullName} (${currentUser.role.toUpperCase()})`;
+                
+                // Adjust tampilan berdasarkan Role
+                if (currentUser.role === 'admin') {
+                    document.getElementById('adminPanel').classList.remove('hidden');
+                    document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+                    document.querySelectorAll('.admin-col').forEach(el => el.classList.remove('hidden'));
+                    document.getElementById('mainContent').style.gridColumn = 'span 1';
+                } else {
+                    document.getElementById('adminPanel').classList.add('hidden');
+                    document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+                    document.querySelectorAll('.admin-col').forEach(el => el.classList.add('hidden'));
+                    document.getElementById('mainContent').style.gridColumn = 'span 2';
+                }
+                renderAll();
+            } else {
+                document.getElementById('authView').classList.remove('hidden');
+                document.getElementById('dashboardView').classList.add('hidden');
+            }
+        }
+
+        // Simpan Data
+        function saveData() {
+            localStorage.setItem('lib_users', JSON.stringify(users));
+            localStorage.setItem('lib_books', JSON.stringify(books));
+            localStorage.setItem('lib_transactions', JSON.stringify(transactions));
+            localStorage.setItem('lib_current_user', JSON.stringify(currentUser));
+            renderAll();
+        }
+
+        // Toggle Form Auth
+        function toggleAuthMode(mode) {
+            if (mode === 'register') {
+                document.getElementById('loginCard').classList.add('hidden');
+                document.getElementById('registerCard').classList.remove('hidden');
+            } else {
+                document.getElementById('registerCard').classList.add('hidden');
+                document.getElementById('loginCard').classList.remove('hidden');
+            }
+        }
+
+        // Handler Registrasi
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value.trim();
+            
+            if (users.some(u => u.username === username)) {
+                alert('Username sudah digunakan!');
+                return;
+            }
+
+            const newUser = {
+                id: Date.now().toString(),
+                username: username,
+                password: document.getElementById('regPassword').value,
+                fullName: document.getElementById('regFullName').value,
+                role: 'member'
+            };
+
+            users.push(newUser);
+            saveData();
+            alert('Pendaftaran berhasil! Silakan login.');
+            toggleAuthMode('login');
+            document.getElementById('registerForm').reset();
+        });
+
+        // Handler Login
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            const user = users.find(u => u.username === username && u.password === password);
+            if (user) {
+                currentUser = user;
+                saveData();
+                initApp();
+                document.getElementById('loginForm').reset();
+            } else {
+                alert('Username atau password salah!');
+            }
+        });
+
+        // Logout
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('lib_current_user');
+            initApp();
+        }
+
+        // Handler Tambah Buku (Admin)
+        document.getElementById('bookForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newBook = {
+                id: Date.now().toString(),
+                code: document.getElementById('kodeBuku').value,
+                title: document.getElementById('judulBuku').value,
+                author: document.getElementById('pengarang').value,
+                category: document.getElementById('kategori').value,
+                status: 'Tersedia'
+            };
+            books.push(newBook);
+            saveData();
+            document.getElementById('bookForm').reset();
+        });
+
+        // Handler Catat Peminjaman (Admin)
+        document.getElementById('borrowForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const bookId = document.getElementById('selectBuku').value;
+            const userId = document.getElementById('selectAnggota').value;
+            
+            const book = books.find(b => b.id === bookId);
+            const user = users.find(u => u.id === userId);
+
+            if (book && user) {
+                book.status = 'Dipinjam';
+                transactions.push({
+                    id: Date.now().toString(),
+                    bookId: book.id,
+                    bookTitle: book.title,
+                    userId: user.id,
+                    borrowerName: user.fullName,
+                    borrowDate: new Date().toLocaleDateString('id-ID'),
+                    returnDate: '-',
+                    status: 'Aktif'
+                });
+                saveData();
+                document.getElementById('borrowForm').reset();
+            }
+        });
+
+        // Proses Pengembalian Buku
+        function returnBook(transactionId) {
+            const trans = transactions.find(t => t.id === transactionId);
+            if (trans) {
+                trans.status = 'Selesai';
+                trans.returnDate = new Date().toLocaleDateString('id-ID');
+                
+                const book = books.find(b => b.id === trans.bookId);
+                if (book) book.status = 'Tersedia';
+
+                saveData();
+            }
+        }
+
+        // Hapus Buku
+        function deleteBook(bookId) {
+            if (confirm('Yakin ingin menghapus buku ini dari inventori?')) {
+                books = books.filter(b => b.id !== bookId);
+                saveData();
+            }
+        }
+
+        // Filter Pencarian Buku
+        function filterBooks() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.getElementById('bookTableBody').getElementsByTagName('tr');
+            for (let row of rows) {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            }
+        }
+
+        // Render Data
+        function renderAll() {
+            // 1. Render Tabel Buku
+            const bookTableBody = document.getElementById('bookTableBody');
+            const selectBuku = document.getElementById('selectBuku');
+            bookTableBody.innerHTML = '';
+            selectBuku.innerHTML = '<option value="">-- Pilih Buku --</option>';
+
+            books.forEach(b => {
+                const isAvailable = b.status === 'Tersedia';
+                const badgeClass = isAvailable ? 'badge-available' : 'badge-borrowed';
+                const actionBtn = currentUser && currentUser.role === 'admin' 
+                    ? `<td class="admin-col"><button class="btn-action btn-delete" onclick="deleteBook('${b.id}')">Hapus</button></td>` 
+                    : '';
+                
+                bookTableBody.innerHTML += `
+                    <tr>
+                        <td><strong>${b.code}</strong></td>
+                        <td>${b.title}</td>
+                        <td>${b.author}</td>
+                        <td>${b.category}</td>
+                        <td><span class="badge ${badgeClass}">${b.status}</span></td>
+                        ${actionBtn}
+                    </tr>
+                `;
+
+                if (isAvailable) {
+                    selectBuku.innerHTML += `<option value="${b.id}">${b.code} - ${b.title}</option>`;
+                }
+            });
+
+            // 2. Render Select Anggota (Form Pinjam)
+            const selectAnggota = document.getElementById('selectAnggota');
+            selectAnggota.innerHTML = '<option value="">-- Pilih Anggota --</option>';
+            users.filter(u => u.role === 'member').forEach(u => {
+                selectAnggota.innerHTML += `<option value="${u.id}">${u.fullName} (${u.username})</option>`;
+            });
+
+            // 3. Render Transaksi Aktif (Admin)
+            const borrowTableBody = document.getElementById('borrowTableBody');
+            borrowTableBody.innerHTML = '';
+            transactions.filter(t => t.status === 'Aktif').forEach(t => {
+                borrowTableBody.innerHTML += `
+                    <tr>
+                        <td>${t.bookTitle}</td>
+                        <td><strong>${t.borrowerName}</strong></td>
+                        <td>${t.borrowDate}</td>
+                        <td>
+                            <button class="btn-action btn-return" onclick="returnBook('${t.id}')">Proses Kembali</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // 4. Render Riwayat Transaksi (All / Filtered by Member)
+            const historyTableBody = document.getElementById('historyTableBody');
+            historyTableBody.innerHTML = '';
+            
+            let displayHistory = transactions;
+            if (currentUser && currentUser.role === 'member') {
+                displayHistory = transactions.filter(t => t.userId === currentUser.id);
+            }
+
+            displayHistory.forEach(t => {
+                const isFinished = t.status === 'Selesai';
+                const badgeClass = isFinished ? 'badge-returned' : 'badge-borrowed';
+                
+                historyTableBody.innerHTML += `
+                    <tr>
+                        <td>${t.bookTitle}</td>
+                        <td>${t.borrowerName}</td>
+                        <td>${t.borrowDate}</td>
+                        <td>${t.returnDate}</td>
+                        <td><span class="badge ${badgeClass}">${t.status}</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Jalankan Aplikasi
+        initApp();
+    </script>
+</body>
+</html>
