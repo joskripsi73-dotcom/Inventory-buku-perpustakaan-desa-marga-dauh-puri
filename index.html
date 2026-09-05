@@ -95,34 +95,77 @@
         }
         .btn-outline:hover { background-color: rgba(255,255,255,0.2); }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
         th { background-color: #f3f4f6; color: #374151; }
+        
+        /* Status Badges */
         .badge {
-            padding: 3px 8px;
+            padding: 4px 8px;
             border-radius: 12px;
             font-size: 0.75rem;
             font-weight: bold;
+            display: inline-block;
         }
         .badge-available { background-color: #d1fae5; color: #065f46; }
         .badge-borrowed { background-color: #fee2e2; color: #991b1b; }
         .badge-returned { background-color: #e0e7ff; color: #3730a3; }
+        .badge-pending { background-color: #fef3c7; color: #92400e; }
+
         .btn-action { width: auto; padding: 4px 8px; font-size: 0.75rem; margin-right: 4px; }
+        .btn-edit { background-color: #f59e0b; }
+        .btn-edit:hover { background-color: #d97706; }
         .btn-delete { background-color: #ef4444; }
         .btn-delete:hover { background-color: #dc2626; }
         .btn-return { background-color: #10b981; }
         .btn-return:hover { background-color: #059669; }
-        .auth-toggle {
-            text-align: center;
-            margin-top: 15px;
-            font-size: 0.85rem;
-        }
+        .btn-approve { background-color: #059669; color: white; }
+        .btn-approve:hover { background-color: #047857; }
+        .btn-reject { background-color: #dc2626; color: white; }
+        .btn-reject:hover { background-color: #b91c1c; }
+
+        .auth-toggle { text-align: center; margin-top: 15px; font-size: 0.85rem; }
         .auth-toggle a { color: #2563eb; text-decoration: none; font-weight: bold; }
         .hidden { display: none !important; }
+
+        /* Filter Section Layout */
+        .filter-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .filter-container input, .filter-container select {
+            font-size: 0.85rem;
+        }
+
+        /* Modal Pop-up */
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 8px;
+            width: 90%; max-width: 450px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-cancel { background-color: #6b7280; }
+        .btn-cancel:hover { background-color: #4b5563; }
+
+        /* Styling Foto Thumbnail */
+        .img-thumb {
+            width: 45px; height: 45px;
+            object-fit: cover; border-radius: 4px;
+            border: 1px solid #ddd; cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-    <!-- HALAMAN AUTENTIKASI (LOGIN & DAFTAR) -->
+    <!-- HALAMAN AUTENTIKASI -->
     <div id="authView" class="auth-container">
         <!-- Form Login -->
         <div id="loginCard" class="card">
@@ -142,7 +185,7 @@
                 Belum punya akun? <a href="#" onclick="toggleAuthMode('register')">Daftar Anggota</a>
             </div>
             <div style="margin-top: 15px; font-size: 0.75rem; color: #666; text-align: center;">
-                <em>Default Admin: username: <b>admin</b> | password: <b>admin</b></em>
+                <em>Default Admin: username: <b>admin123</b> | password: <b>admin123</b></em>
             </div>
         </div>
 
@@ -182,10 +225,10 @@
         </div>
 
         <div class="grid-layout">
-            <!-- Kolom Kiri: Form Input (Khusus Admin) -->
-            <div id="adminPanel">
-                <!-- Form Tambah Buku -->
-                <div class="card">
+            <!-- Kolom Kiri: Form Input -->
+            <div>
+                <!-- Form Tambah Buku (Khusus Admin) -->
+                <div id="adminBookCard" class="card admin-only">
                     <h2>Tambah Buku Baru</h2>
                     <form id="bookForm">
                         <div class="form-group">
@@ -204,34 +247,41 @@
                             <label for="kategori">Kategori / Rak</label>
                             <input type="text" id="kategori" placeholder="Contoh: Pertanian / Rak A1">
                         </div>
+                        <div class="form-group">
+                            <label for="jumlahBuku">Jumlah Stock Buku</label>
+                            <input type="number" id="jumlahBuku" min="1" required value="1">
+                        </div>
                         <button type="submit">Simpan Buku</button>
                     </form>
                 </div>
 
-                <!-- Form Transaksi Pinjam -->
-                <div class="card">
-                    <h2>Peminjaman Buku</h2>
+                <!-- Form Pengajuan Pinjam (Khusus Member) -->
+                <div id="memberBorrowCard" class="card member-only">
+                    <h2>Ajukan Peminjaman Buku</h2>
                     <form id="borrowForm">
                         <div class="form-group">
                             <label for="selectBuku">Pilih Buku Tersedia</label>
-                            <select id="selectBuku" required>
+                            <select id="selectBuku" required onchange="updateMaxBorrowQty()">
                                 <option value="">-- Pilih Buku --</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="selectAnggota">Pilih Anggota Peminjam</label>
-                            <select id="selectAnggota" required>
-                                <option value="">-- Pilih Anggota --</option>
-                            </select>
+                            <label for="borrowQty">Jumlah Dipinjam (Unit)</label>
+                            <input type="number" id="borrowQty" min="1" value="1" required placeholder="Pilih buku dulu" disabled>
                         </div>
-                        <button type="submit" style="background-color: #059669;">Catat Peminjaman</button>
+                        <div class="form-group">
+                            <label for="photoPinjam">Ambil Foto Buku (Kamera HP)</label>
+                            <input type="file" id="photoPinjam" accept="image/*" capture="environment" required>
+                            <small style="color: #666;">*Mengakses kamera HP secara langsung</small>
+                        </div>
+                        <button type="submit" style="background-color: #059669;">Kirim Pengajuan</button>
                     </form>
                 </div>
             </div>
 
             <!-- Kolom Kanan: Tabel Data -->
-            <div id="mainContent" style="grid-column: span 1;">
-                <!-- Tabel Inventori Buku -->
+            <div id="mainContent">
+                <!-- Tabel Katalog Buku -->
                 <div class="card">
                     <h2>Katalog Buku</h2>
                     <div style="margin-bottom: 15px;">
@@ -245,6 +295,7 @@
                                     <th>Judul</th>
                                     <th>Pengarang</th>
                                     <th>Kategori</th>
+                                    <th>Stock</th>
                                     <th>Status</th>
                                     <th class="admin-col">Aksi</th>
                                 </tr>
@@ -254,36 +305,89 @@
                     </div>
                 </div>
 
-                <!-- Tabel Peminjaman Aktif (Khusus Admin) -->
+                <!-- Tabel Antrean Konfirmasi Pengajuan (Khusus Admin) -->
                 <div class="card admin-only">
-                    <h2>Peminjaman Aktif (Belum Kembali)</h2>
+                    <h2>Persetujuan Pengajuan Peminjaman</h2>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Buku & Jumlah</th>
+                                    <th>Peminjam</th>
+                                    <th>Foto Pinjam</th>
+                                    <th>Aksi Konfirmasi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingBorrowTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabel Antrean Konfirmasi Pengembalian (Khusus Admin) -->
+                <div class="card admin-only">
+                    <h2>Persetujuan Pengembalian Buku</h2>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Buku & Jumlah</th>
+                                    <th>Peminjam</th>
+                                    <th>Foto Pinjam</th>
+                                    <th>Foto Kembali</th>
+                                    <th>Aksi Konfirmasi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingReturnTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabel Peminjaman Aktif Member -->
+                <div class="card member-only">
+                    <h2>Pinjaman Saya (Sedang Aktif)</h2>
                     <div style="overflow-x: auto;">
                         <table>
                             <thead>
                                 <tr>
                                     <th>Judul Buku</th>
-                                    <th>Peminjam</th>
                                     <th>Tanggal Pinjam</th>
+                                    <th>Status</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody id="borrowTableBody"></tbody>
+                            <tbody id="myActiveTableBody"></tbody>
                         </table>
                     </div>
                 </div>
 
                 <!-- Tabel Riwayat Seluruh Transaksi -->
                 <div class="card">
-                    <h2>Riwayat Transaksi Peminjaman</h2>
+                    <h2>Riwayat Seluruh Transaksi</h2>
+                    
+                    <!-- FITUR FILTER RIWAYAT TRANSAKSI -->
+                    <div class="filter-container">
+                        <input type="text" id="historySearchInput" placeholder="Cari buku atau peminjam..." onkeyup="renderHistoryTable()" style="flex: 2;">
+                        <select id="historyStatusFilter" onchange="renderHistoryTable()" style="flex: 1;">
+                            <option value="">-- Semua Status --</option>
+                            <option value="Menunggu Konfirmasi Pinjam">Menunggu Konfirmasi Pinjam</option>
+                            <option value="Dipinjam (Aktif)">Dipinjam (Aktif)</option>
+                            <option value="Menunggu Konfirmasi Kembali">Menunggu Konfirmasi Kembali</option>
+                            <option value="Selesai">Selesai</option>
+                            <option value="Ditolak Admin">Ditolak Admin</option>
+                        </select>
+                    </div>
+
                     <div style="overflow-x: auto;">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Judul Buku</th>
+                                    <th>Judul (Unit)</th>
                                     <th>Peminjam</th>
-                                    <th>Tgl Pinjam</th>
-                                    <th>Tgl Kembali</th>
-                                    <th>Status</th>
+                                    <th>Pinjam / Kembali</th>
+                                    <th>Foto Pinjam</th>
+                                    <th>Foto Kembali</th>
+                                    <th>Status Transaksi</th>
+                                    <th class="admin-col">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="historyTableBody"></tbody>
@@ -294,33 +398,81 @@
         </div>
     </div>
 
+    <!-- MODAL EDIT BUKU -->
+    <div id="editModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Edit Data Buku</h2>
+            <form id="editBookForm">
+                <input type="hidden" id="editBookId">
+                <div class="form-group">
+                    <label for="editKodeBuku">Kode / ISBN Buku</label>
+                    <input type="text" id="editKodeBuku" required>
+                </div>
+                <div class="form-group">
+                    <label for="editJudulBuku">Judul Buku</label>
+                    <input type="text" id="editJudulBuku" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPengarang">Pengarang</label>
+                    <input type="text" id="editPengarang" required>
+                </div>
+                <div class="form-group">
+                    <label for="editKategori">Kategori / Rak</label>
+                    <input type="text" id="editKategori">
+                </div>
+                <div class="form-group">
+                    <label for="editJumlahBuku">Jumlah Stock Buku</label>
+                    <input type="number" id="editJumlahBuku" min="0" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" style="background-color: #2563eb;">Simpan Perubahan</button>
+                    <button type="button" class="btn-cancel" onclick="closeEditModal()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL MEMBER PROSES PENGEMBALIAN BUKU -->
+    <div id="returnModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Foto Pengembalian Buku</h2>
+            <form id="returnBookForm">
+                <input type="hidden" id="returnTransId">
+                <div class="form-group">
+                    <label for="photoKembali">Ambil Foto Kondisi Buku (Kamera HP)</label>
+                    <input type="file" id="photoKembali" accept="image/*" capture="environment" required>
+                    <small style="color: #666;">*Mengakses kamera HP secara langsung</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" style="background-color: #10b981;">Kirim Pengembalian</button>
+                    <button type="button" class="btn-cancel" onclick="closeReturnModal()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // Store Data pada LocalStorage
         let users = JSON.parse(localStorage.getItem('lib_users')) || [
-            { id: '1', username: 'admin', password: 'admin', fullName: 'Petugas Admin', role: 'admin' }
+            { id: '1', username: 'admin123', password: 'admin123', fullName: 'Petugas Admin', role: 'admin' }
         ];
         let books = JSON.parse(localStorage.getItem('lib_books')) || [];
         let transactions = JSON.parse(localStorage.getItem('lib_transactions')) || [];
         let currentUser = JSON.parse(localStorage.getItem('lib_current_user')) || null;
 
-        // Inisialisasi Aplikasi
         function initApp() {
             if (currentUser) {
                 document.getElementById('authView').classList.add('hidden');
                 document.getElementById('dashboardView').classList.remove('hidden');
                 document.getElementById('userInfo').innerText = `${currentUser.fullName} (${currentUser.role.toUpperCase()})`;
                 
-                // Adjust tampilan berdasarkan Role
                 if (currentUser.role === 'admin') {
-                    document.getElementById('adminPanel').classList.remove('hidden');
                     document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
                     document.querySelectorAll('.admin-col').forEach(el => el.classList.remove('hidden'));
-                    document.getElementById('mainContent').style.gridColumn = 'span 1';
+                    document.querySelectorAll('.member-only').forEach(el => el.classList.add('hidden'));
                 } else {
-                    document.getElementById('adminPanel').classList.add('hidden');
                     document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
                     document.querySelectorAll('.admin-col').forEach(el => el.classList.add('hidden'));
-                    document.getElementById('mainContent').style.gridColumn = 'span 2';
+                    document.querySelectorAll('.member-only').forEach(el => el.classList.remove('hidden'));
                 }
                 renderAll();
             } else {
@@ -329,7 +481,6 @@
             }
         }
 
-        // Simpan Data
         function saveData() {
             localStorage.setItem('lib_users', JSON.stringify(users));
             localStorage.setItem('lib_books', JSON.stringify(books));
@@ -338,7 +489,6 @@
             renderAll();
         }
 
-        // Toggle Form Auth
         function toggleAuthMode(mode) {
             if (mode === 'register') {
                 document.getElementById('loginCard').classList.add('hidden');
@@ -349,16 +499,13 @@
             }
         }
 
-        // Handler Registrasi
         document.getElementById('registerForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const username = document.getElementById('regUsername').value.trim();
-            
             if (users.some(u => u.username === username)) {
                 alert('Username sudah digunakan!');
                 return;
             }
-
             const newUser = {
                 id: Date.now().toString(),
                 username: username,
@@ -366,7 +513,6 @@
                 fullName: document.getElementById('regFullName').value,
                 role: 'member'
             };
-
             users.push(newUser);
             saveData();
             alert('Pendaftaran berhasil! Silakan login.');
@@ -374,7 +520,6 @@
             document.getElementById('registerForm').reset();
         });
 
-        // Handler Login
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const username = document.getElementById('loginUsername').value.trim();
@@ -391,70 +536,200 @@
             }
         });
 
-        // Logout
         function logout() {
             currentUser = null;
             localStorage.removeItem('lib_current_user');
             initApp();
         }
 
-        // Handler Tambah Buku (Admin)
+        // TAMBAH BUKU (ADMIN)
         document.getElementById('bookForm').addEventListener('submit', (e) => {
             e.preventDefault();
+            const qty = parseInt(document.getElementById('jumlahBuku').value) || 1;
             const newBook = {
                 id: Date.now().toString(),
                 code: document.getElementById('kodeBuku').value,
                 title: document.getElementById('judulBuku').value,
                 author: document.getElementById('pengarang').value,
                 category: document.getElementById('kategori').value,
-                status: 'Tersedia'
+                quantity: qty,
+                status: qty > 0 ? 'Tersedia' : 'Habis'
             };
             books.push(newBook);
             saveData();
             document.getElementById('bookForm').reset();
+            document.getElementById('jumlahBuku').value = "1";
         });
 
-        // Handler Catat Peminjaman (Admin)
-        document.getElementById('borrowForm').addEventListener('submit', (e) => {
+        // EDIT BUKU (ADMIN)
+        function openEditModal(bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (book) {
+                document.getElementById('editBookId').value = book.id;
+                document.getElementById('editKodeBuku').value = book.code;
+                document.getElementById('editJudulBuku').value = book.title;
+                document.getElementById('editPengarang').value = book.author;
+                document.getElementById('editKategori').value = book.category;
+                document.getElementById('editJumlahBuku').value = book.quantity !== undefined ? book.quantity : 1;
+                document.getElementById('editModal').classList.remove('hidden');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editBookForm').reset();
+        }
+
+        document.getElementById('editBookForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const bookId = document.getElementById('editBookId').value;
+            const book = books.find(b => b.id === bookId);
+            if (book) {
+                const qty = parseInt(document.getElementById('editJumlahBuku').value) || 0;
+                book.code = document.getElementById('editKodeBuku').value;
+                book.title = document.getElementById('editJudulBuku').value;
+                book.author = document.getElementById('editPengarang').value;
+                book.category = document.getElementById('editKategori').value;
+                book.quantity = qty;
+                book.status = qty <= 0 ? 'Habis' : 'Tersedia';
+
+                saveData();
+                closeEditModal();
+            }
+        });
+
+        function updateMaxBorrowQty() {
+            const bookId = document.getElementById('selectBuku').value;
+            const borrowQtyInput = document.getElementById('borrowQty');
+            const book = books.find(b => b.id === bookId);
+
+            if (book) {
+                borrowQtyInput.disabled = false;
+                borrowQtyInput.max = book.quantity;
+                borrowQtyInput.value = 1;
+            } else {
+                borrowQtyInput.disabled = true;
+                borrowQtyInput.value = 1;
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // PENGAJUAN PINJAM (MEMBER)
+        document.getElementById('borrowForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const bookId = document.getElementById('selectBuku').value;
-            const userId = document.getElementById('selectAnggota').value;
+            const borrowQty = parseInt(document.getElementById('borrowQty').value) || 1;
+            const photoFile = document.getElementById('photoPinjam').files[0];
             
             const book = books.find(b => b.id === bookId);
-            const user = users.find(u => u.id === userId);
 
-            if (book && user) {
-                book.status = 'Dipinjam';
+            if (book && photoFile && currentUser) {
+                if (borrowQty > book.quantity) {
+                    alert(`Jumlah pinjam melebihi sisa stok (${book.quantity} unit)!`);
+                    return;
+                }
+
+                const photoBase64 = await fileToBase64(photoFile);
+
                 transactions.push({
                     id: Date.now().toString(),
                     bookId: book.id,
                     bookTitle: book.title,
-                    userId: user.id,
-                    borrowerName: user.fullName,
+                    borrowQty: borrowQty,
+                    userId: currentUser.id,
+                    borrowerName: currentUser.fullName,
                     borrowDate: new Date().toLocaleDateString('id-ID'),
                     returnDate: '-',
-                    status: 'Aktif'
+                    borrowPhoto: photoBase64,
+                    returnPhoto: null,
+                    status: 'Menunggu Konfirmasi Pinjam'
                 });
+
                 saveData();
+                alert('Pengajuan peminjaman berhasil dikirim. Menunggu konfirmasi admin.');
                 document.getElementById('borrowForm').reset();
+                document.getElementById('borrowQty').disabled = true;
             }
         });
 
-        // Proses Pengembalian Buku
-        function returnBook(transactionId) {
-            const trans = transactions.find(t => t.id === transactionId);
+        // KONFIRMASI PEMINJAMAN (ADMIN)
+        function approveBorrow(transId) {
+            const trans = transactions.find(t => t.id === transId);
+            if (trans) {
+                const book = books.find(b => b.id === trans.bookId);
+                if (book && book.quantity >= trans.borrowQty) {
+                    book.quantity -= trans.borrowQty;
+                    if (book.quantity <= 0) book.status = 'Habis';
+                    
+                    trans.status = 'Dipinjam (Aktif)';
+                    saveData();
+                } else {
+                    alert('Stok buku tidak mencukupi untuk menyetujui peminjaman ini!');
+                }
+            }
+        }
+
+        function rejectBorrow(transId) {
+            const trans = transactions.find(t => t.id === transId);
+            if (trans) {
+                trans.status = 'Ditolak Admin';
+                saveData();
+            }
+        }
+
+        // MODAL UNTUK MEMBER KIRIM PENGEMBALIAN
+        function openReturnModal(transId) {
+            document.getElementById('returnTransId').value = transId;
+            document.getElementById('returnModal').classList.remove('hidden');
+        }
+
+        function closeReturnModal() {
+            document.getElementById('returnModal').classList.add('hidden');
+            document.getElementById('returnBookForm').reset();
+        }
+
+        document.getElementById('returnBookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const transId = document.getElementById('returnTransId').value;
+            const photoFile = document.getElementById('photoKembali').files[0];
+            const trans = transactions.find(t => t.id === transId);
+
+            if (trans && photoFile) {
+                const photoBase64 = await fileToBase64(photoFile);
+                trans.status = 'Menunggu Konfirmasi Kembali';
+                trans.returnPhoto = photoBase64;
+
+                saveData();
+                alert('Pengajuan pengembalian dikirim. Menunggu verifikasi admin.');
+                closeReturnModal();
+            }
+        });
+
+        // KONFIRMASI PENGEMBALIAN (ADMIN)
+        function approveReturn(transId) {
+            const trans = transactions.find(t => t.id === transId);
             if (trans) {
                 trans.status = 'Selesai';
                 trans.returnDate = new Date().toLocaleDateString('id-ID');
-                
+
                 const book = books.find(b => b.id === trans.bookId);
-                if (book) book.status = 'Tersedia';
+                if (book) {
+                    book.quantity += trans.borrowQty;
+                    book.status = 'Tersedia';
+                }
 
                 saveData();
             }
         }
 
-        // Hapus Buku
         function deleteBook(bookId) {
             if (confirm('Yakin ingin menghapus buku ini dari inventori?')) {
                 books = books.filter(b => b.id !== bookId);
@@ -462,7 +737,14 @@
             }
         }
 
-        // Filter Pencarian Buku
+        // HAPUS RIWAYAT TRANSAKSI (ADMIN)
+        function deleteTransaction(transId) {
+            if (confirm('Yakin ingin menghapus catatan riwayat transaksi ini?')) {
+                transactions = transactions.filter(t => t.id !== transId);
+                saveData();
+            }
+        }
+
         function filterBooks() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const rows = document.getElementById('bookTableBody').getElementsByTagName('tr');
@@ -472,19 +754,74 @@
             }
         }
 
-        // Render Data
+        // RENDER TABEL RIWAYAT TRANSAKSI DENGAN FILTER DAN TOMBOL HAPUS
+        function renderHistoryTable() {
+            const historyTableBody = document.getElementById('historyTableBody');
+            historyTableBody.innerHTML = '';
+            
+            const searchQuery = document.getElementById('historySearchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('historyStatusFilter').value;
+
+            let displayHistory = transactions;
+
+            // Filter khusus jika user adalah Member
+            if (currentUser && currentUser.role === 'member') {
+                displayHistory = transactions.filter(t => t.userId === currentUser.id);
+            }
+
+            // Terapkan Filter Pencarian & Status
+            displayHistory = displayHistory.filter(t => {
+                const matchQuery = t.bookTitle.toLowerCase().includes(searchQuery) || t.borrowerName.toLowerCase().includes(searchQuery);
+                const matchStatus = statusFilter === '' || t.status === statusFilter;
+                return matchQuery && matchStatus;
+            });
+
+            displayHistory.forEach(t => {
+                let badgeClass = 'badge-pending';
+                if (t.status === 'Selesai') badgeClass = 'badge-returned';
+                if (t.status === 'Dipinjam (Aktif)') badgeClass = 'badge-borrowed';
+
+                const returnImgHTML = t.returnPhoto 
+                    ? `<a href="${t.returnPhoto}" target="_blank"><img src="${t.returnPhoto}" class="img-thumb"></a>`
+                    : '-';
+
+                const actionCol = currentUser && currentUser.role === 'admin'
+                    ? `<td class="admin-col">
+                        <button class="btn-action btn-delete" onclick="deleteTransaction('${t.id}')">Hapus</button>
+                       </td>`
+                    : '';
+
+                historyTableBody.innerHTML += `
+                    <tr>
+                        <td><b>${t.bookTitle}</b><br><small>(${t.borrowQty} Unit)</small></td>
+                        <td>${t.borrowerName}</td>
+                        <td>Pinjam: ${t.borrowDate}<br>Kembali: ${t.returnDate}</td>
+                        <td><a href="${t.borrowPhoto}" target="_blank"><img src="${t.borrowPhoto}" class="img-thumb"></a></td>
+                        <td>${returnImgHTML}</td>
+                        <td><span class="badge ${badgeClass}">${t.status}</span></td>
+                        ${actionCol}
+                    </tr>
+                `;
+            });
+        }
+
         function renderAll() {
-            // 1. Render Tabel Buku
+            // 1. Render Katalog Buku
             const bookTableBody = document.getElementById('bookTableBody');
             const selectBuku = document.getElementById('selectBuku');
             bookTableBody.innerHTML = '';
             selectBuku.innerHTML = '<option value="">-- Pilih Buku --</option>';
 
             books.forEach(b => {
-                const isAvailable = b.status === 'Tersedia';
+                const qty = b.quantity !== undefined ? b.quantity : 1;
+                const isAvailable = qty > 0;
                 const badgeClass = isAvailable ? 'badge-available' : 'badge-borrowed';
+                
                 const actionBtn = currentUser && currentUser.role === 'admin' 
-                    ? `<td class="admin-col"><button class="btn-action btn-delete" onclick="deleteBook('${b.id}')">Hapus</button></td>` 
+                    ? `<td class="admin-col">
+                        <button class="btn-action btn-edit" onclick="openEditModal('${b.id}')">Edit</button>
+                        <button class="btn-action btn-delete" onclick="deleteBook('${b.id}')">Hapus</button>
+                       </td>` 
                     : '';
                 
                 bookTableBody.innerHTML += `
@@ -493,65 +830,76 @@
                         <td>${b.title}</td>
                         <td>${b.author}</td>
                         <td>${b.category}</td>
-                        <td><span class="badge ${badgeClass}">${b.status}</span></td>
+                        <td><strong>${qty}</strong> unit</td>
+                        <td><span class="badge ${badgeClass}">${isAvailable ? 'Tersedia' : 'Habis'}</span></td>
                         ${actionBtn}
                     </tr>
                 `;
 
                 if (isAvailable) {
-                    selectBuku.innerHTML += `<option value="${b.id}">${b.code} - ${b.title}</option>`;
+                    selectBuku.innerHTML += `<option value="${b.id}">${b.code} - ${b.title} (Sisa Stok: ${qty})</option>`;
                 }
             });
 
-            // 2. Render Select Anggota (Form Pinjam)
-            const selectAnggota = document.getElementById('selectAnggota');
-            selectAnggota.innerHTML = '<option value="">-- Pilih Anggota --</option>';
-            users.filter(u => u.role === 'member').forEach(u => {
-                selectAnggota.innerHTML += `<option value="${u.id}">${u.fullName} (${u.username})</option>`;
-            });
-
-            // 3. Render Transaksi Aktif (Admin)
-            const borrowTableBody = document.getElementById('borrowTableBody');
-            borrowTableBody.innerHTML = '';
-            transactions.filter(t => t.status === 'Aktif').forEach(t => {
-                borrowTableBody.innerHTML += `
+            // 2. Render Antrean Konfirmasi Pinjam (Admin)
+            const pendingBorrowTableBody = document.getElementById('pendingBorrowTableBody');
+            pendingBorrowTableBody.innerHTML = '';
+            transactions.filter(t => t.status === 'Menunggu Konfirmasi Pinjam').forEach(t => {
+                pendingBorrowTableBody.innerHTML += `
                     <tr>
-                        <td>${t.bookTitle}</td>
+                        <td><b>${t.bookTitle}</b> <br><small>(${t.borrowQty} Unit)</small></td>
                         <td><strong>${t.borrowerName}</strong></td>
-                        <td>${t.borrowDate}</td>
+                        <td><a href="${t.borrowPhoto}" target="_blank"><img src="${t.borrowPhoto}" class="img-thumb"></a></td>
                         <td>
-                            <button class="btn-action btn-return" onclick="returnBook('${t.id}')">Proses Kembali</button>
+                            <button class="btn-action btn-approve" onclick="approveBorrow('${t.id}')">Setujui</button>
+                            <button class="btn-action btn-reject" onclick="rejectBorrow('${t.id}')">Tolak</button>
                         </td>
                     </tr>
                 `;
             });
 
-            // 4. Render Riwayat Transaksi (All / Filtered by Member)
-            const historyTableBody = document.getElementById('historyTableBody');
-            historyTableBody.innerHTML = '';
-            
-            let displayHistory = transactions;
-            if (currentUser && currentUser.role === 'member') {
-                displayHistory = transactions.filter(t => t.userId === currentUser.id);
-            }
-
-            displayHistory.forEach(t => {
-                const isFinished = t.status === 'Selesai';
-                const badgeClass = isFinished ? 'badge-returned' : 'badge-borrowed';
-                
-                historyTableBody.innerHTML += `
+            // 3. Render Antrean Konfirmasi Kembali (Admin)
+            const pendingReturnTableBody = document.getElementById('pendingReturnTableBody');
+            pendingReturnTableBody.innerHTML = '';
+            transactions.filter(t => t.status === 'Menunggu Konfirmasi Kembali').forEach(t => {
+                pendingReturnTableBody.innerHTML += `
                     <tr>
-                        <td>${t.bookTitle}</td>
-                        <td>${t.borrowerName}</td>
-                        <td>${t.borrowDate}</td>
-                        <td>${t.returnDate}</td>
-                        <td><span class="badge ${badgeClass}">${t.status}</span></td>
+                        <td><b>${t.bookTitle}</b> <br><small>(${t.borrowQty} Unit)</small></td>
+                        <td><strong>${t.borrowerName}</strong></td>
+                        <td><a href="${t.borrowPhoto}" target="_blank"><img src="${t.borrowPhoto}" class="img-thumb"></a></td>
+                        <td><a href="${t.returnPhoto}" target="_blank"><img src="${t.returnPhoto}" class="img-thumb"></a></td>
+                        <td>
+                            <button class="btn-action btn-approve" onclick="approveReturn('${t.id}')">Setujui Kembali</button>
+                        </td>
                     </tr>
                 `;
             });
+
+            // 4. Render Pinjaman Aktif Member
+            const myActiveTableBody = document.getElementById('myActiveTableBody');
+            myActiveTableBody.innerHTML = '';
+            if (currentUser && currentUser.role === 'member') {
+                transactions.filter(t => t.userId === currentUser.id && (t.status === 'Dipinjam (Aktif)' || t.status.includes('Menunggu'))).forEach(t => {
+                    let actionHTML = '-';
+                    if (t.status === 'Dipinjam (Aktif)') {
+                        actionHTML = `<button class="btn-action btn-return" onclick="openReturnModal('${t.id}')">Kembalikan Buku</button>`;
+                    }
+
+                    myActiveTableBody.innerHTML += `
+                        <tr>
+                            <td><b>${t.bookTitle}</b> (${t.borrowQty} Unit)</td>
+                            <td>${t.borrowDate}</td>
+                            <td><span class="badge badge-pending">${t.status}</span></td>
+                            <td>${actionHTML}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // 5. Render Tabel Riwayat Transaksi
+            renderHistoryTable();
         }
 
-        // Jalankan Aplikasi
         initApp();
     </script>
 </body>
